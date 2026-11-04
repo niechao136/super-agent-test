@@ -16,24 +16,78 @@ usually with a pull request.
 
 ## Testing
 
-There is no build step, no dependencies and no automated test suite here, so there is
-no test command to run. Testing is manual and covers two things: a proposed change and
-the agent that produced it.
+There is no build step, no dependencies and no test runner here. `npm test` fails with
+`ENOENT ... package.json` and `make test` fails with `No rule to make target 'test'`;
+both are expected, because neither file exists.
 
-### Checking a proposed change
+What does exist is a short list of checks that run from the repository root with standard
+tools: `git` and `grep`, plus `curl` for links and `gh` for the last step. Run them
+before opening a pull request. Steps 1 and 2 print `ok` or `FAIL`; step 3 speaks up only
+when a file is wrong; step 4 prints one line per link; step 5 shows GitHub's own checks.
+
+### 1. No unresolved merge conflict markers
+
+```bash
+grep -rnE '^(<<<<<<<|>>>>>>>)' --include='*.md' . \
+  && echo 'FAIL: resolve the conflict markers above' \
+  || echo 'ok: no conflict markers'
+```
+
+### 2. No whitespace errors in the diff
+
+```bash
+git fetch -q origin master
+git diff --check origin/master \
+  && echo 'ok: no whitespace errors' \
+  || echo 'FAIL: fix the whitespace errors above'
+```
+
+It reports trailing whitespace and leftover conflict markers with file and line number,
+for example `README.md:53: trailing whitespace.`.
+
+### 3. Every Markdown file ends with a newline
+
+```bash
+git ls-files '*.md' | while read -r f; do
+  [ -z "$(tail -c 1 "$f")" ] || echo "FAIL: $f has no final newline"
+done
+```
+
+Prints nothing when every file ends with a newline.
+
+### 4. Every external link still answers
+
+```bash
+for url in $(grep -rhoE '\(https?://[^)]+\)' --include='*.md' . | tr -d '()' | sort -u); do
+  curl -sS -fL -o /dev/null -w '%{http_code} %{url_effective}\n' --max-time 20 "$url" \
+    || echo "FAIL: $url"
+done
+```
+
+Prints one line per link and `FAIL` for any link that does not answer `200`. A `404`
+means the link needs updating; `000` usually means no network access where you ran it.
+
+### 5. The checks GitHub runs for you
+
+```bash
+gh pr checks <number> --repo niechao136/super-agent-test
+```
+
+GitGuardian is currently the only check configured. A pass there means no secret was
+committed, not that the change is correct, so steps 1 to 4 still matter.
+
+### Checking the change itself
+
+The commands above cover the mechanical part. Reviewing the content is still manual:
 
 1. Read the pull request description and confirm it says what changed, why, and what
    was checked.
 2. Read the diff and confirm it touches only the files the description claims.
 3. Check the rendered Markdown on the pull request's "Files changed" tab, links
    included.
-4. Look at the checks on the pull request. GitGuardian is currently the only one
-   configured; a pass there means no secret was committed, not that the change is
-   correct.
-
-Keep `README.md` and `docs/CONVENTIONS.md` consistent with each other: branches made by
-the agent start with `agent/`, commits use the `niechao-superagent` author, and the agent
-opens pull requests but does not merge them.
+4. Keep `README.md` and `docs/CONVENTIONS.md` consistent with each other: branches made
+   by the agent start with `agent/`, commits use the `niechao-superagent` author, and the
+   agent opens pull requests but does not merge them.
 
 ### Checking the agent end to end
 
@@ -48,5 +102,5 @@ opens pull requests but does not merge them.
    repository.
 
 If steps 2 to 4 do not happen, the agent run has failed; it is not a gap in the
-documentation. There is nothing to set up, install or run to reproduce a result: every
-check above is done from the issue and pull request pages.
+documentation. Every check in this section is done from the issue and pull request
+pages, with nothing to set up locally.
