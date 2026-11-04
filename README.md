@@ -5,14 +5,22 @@ a proactive coding agent that works on this repository when someone allowed asks
 
 ## How to ask for work
 
-Comment on an issue with:
+Open a new issue, or comment on an existing issue or pull request, and mention the
+agent's GitHub account `@niechao-superagent` along with what you want done:
 
 ```
-@niechao-superagent <what you want>
+@niechao-superagent <what you want done>
 ```
 
-The agent opens a Ticket, works in its own checkout, and answers in the same conversation,
-usually with a pull request.
+Say which files should change and what should be different, for example `README.md`
+or `docs/CONVENTIONS.md`. Begin a request by mentioning the agent. Once it is working
+in a conversation, reply there to continue; another mention is not needed.
+
+The agent acknowledges the request in that conversation, works in its own checkout,
+and usually answers with a pull request from a branch named `agent/<ticket-name>`.
+A person reviews and merges it; the agent does not merge its own work. The Testing
+section below walks through what a healthy run looks like, under
+[Checking the agent end to end](#checking-the-agent-end-to-end).
 
 ## Testing
 
